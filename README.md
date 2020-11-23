@@ -1,6 +1,8 @@
 go-socks
 ========
 
+![Build status](https://github.com/bokysan/go-socks/workflows/Build%20and%20release/badge.svg) [![Latest commit](https://img.shields.io/github/last-commit/bokysan/go-socks)](https://github.com/bokysan/go-socks/commits/master) [![Latest release](https://img.shields.io/github/v/release/bokysan/go-socks?sort=semver&Label=Latest%20release)](https://github.com/bokysan/go-socks/releases) [![License](https://img.shields.io/github/license/bokysan/go-socks)](https://github.com/bokysan/go-socks/blob/master/LICENSE) [![Go Report Card](https://goreportcard.com/badge/github.com/bokysan/go-socks)](https://goreportcard.com/report/github.com/bokysan/go-socks) ![Go version](https://img.shields.io/github/go-mod/go-version/bokysan/go-socks)
+
 **This is an active fork of [go-socks5 by armon](https://github.com/armon/go-socks5)**, as the mentioned
 repository does not seem to be updated.
 
