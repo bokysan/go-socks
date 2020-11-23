@@ -2,6 +2,9 @@ package socks5
 
 import (
 	"bufio"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	go_proxy "golang.org/x/net/proxy"
 	"io"
 	"net"
@@ -93,40 +96,44 @@ func testSetupEchoService(t *testing.T) (func(), error) {
 	}, nil
 }
 
-func testHelloEcho(t *testing.T, conn io.ReadWriteCloser) {
+func testHelloEcho(t *testing.T, conn io.ReadWriteCloser) error {
 	var err error
 
 	scanner := bufio.NewScanner(conn)
 
 	_, err = conn.Write([]byte("HELLO\r\n"))
-	if err != nil {
-		t.Fatalf("Could not start echo service: %v", err)
+	if !assert.NoError(t, err) {
+		return errors.Wrapf(err, "Could not start echo service: %v", err)
 	}
-	if !scanner.Scan() {
-		t.Fatalf("Could not get first line from echo service")
+
+	if !assert.True(t, scanner.Scan()) {
+		return errors.Errorf("Could not get first line from echo service")
 	}
-	if "HELLO" != scanner.Text() {
-		t.Fatalf("Expected HELLO bug got something else")
+	if !assert.Equal(t, "HELLO", scanner.Text()) {
+		return errors.Errorf("Expected HELLO bug got something else")
 	}
 	_, err = conn.Write([]byte("QUIT\r\n"))
-	if err != nil {
-		t.Fatalf("Could not start echo service: %v", err)
+	if !assert.NoError(t, err) {
+		return errors.Wrapf(err, "Could not start echo service: %v", err)
 	}
-	if !scanner.Scan() {
-		t.Fatalf("Could not get first line from echo service")
+	if !assert.True(t, scanner.Scan()) {
+		return errors.Errorf("Could not get first line from echo service")
 	}
-	if "QUIT" != scanner.Text() {
-		t.Fatalf("Expected QUIT bug got something else")
+	if !assert.Equal(t, "QUIT", scanner.Text()) {
+		return errors.Errorf("Expected QUIT bug got something else")
 	}
-	if scanner.Scan() {
+	if !assert.False(t, scanner.Scan()) {
 		t.Fatalf("Expected FALSE but got TRUE")
 	}
+
+	return nil
 }
 
 type testDialer struct {
 	conn net.Conn
 }
 
+//goland:noinspection GoUnusedParameter
 func (t *testDialer) Dial(network, addr string) (c net.Conn, err error) {
 	return t.conn, nil
 }
@@ -160,16 +167,19 @@ func (t *testSimulatedConnection) RemoteAddr() net.Addr {
 	return t.remoteAddr
 }
 
+//goland:noinspection GoUnusedParameter
 func (t *testSimulatedConnection) SetDeadline(time time.Time) error {
 	// ignore
 	return nil
 }
 
+//goland:noinspection GoUnusedParameter
 func (t *testSimulatedConnection) SetReadDeadline(time time.Time) error {
 	// ignore
 	return nil
 }
 
+//goland:noinspection GoUnusedParameter
 func (t *testSimulatedConnection) SetWriteDeadline(time time.Time) error {
 	// ignore
 	return nil
@@ -215,15 +225,21 @@ func TestSOCKS5_Close(t *testing.T) {
 	dialer, err := go_proxy.SOCKS5("tcp", "this-is-ignored:54001", nil, &testDialer{
 		conn: clientConnection,
 	})
-	if err != nil {
-		t.Fatalf("Could not start proxy client: %v", err)
-	}
+	require.NoError(t, err)
 
 	conn, err := dialer.Dial("tcp", "127.0.0.1:54000") // The address of the echo service
-	if err != nil {
-		t.Fatalf("Could not connect to echo service: %v", err)
-	}
+	require.NoError(t, err)
 
-	testHelloEcho(t, conn)
+	res := make(chan error, 1)
+	go func() {
+		res <- testHelloEcho(t, conn)
+	}()
+
+	select {
+	case err = <-res:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatalf("Timed out while waiting for echo service.")
+	}
 
 }

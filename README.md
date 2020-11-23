@@ -1,17 +1,28 @@
-go-socks5 [![Build Status](https://travis-ci.org/armon/go-socks5.png)](https://travis-ci.org/armon/go-socks5)
-=========
+go-socks
+========
 
-Provides the `socks5` package that implements a [SOCKS5 server](http://en.wikipedia.org/wiki/SOCKS).
-SOCKS (Secure Sockets) is used to route traffic between a client and server through
-an intermediate proxy layer. This can be used to bypass firewalls or NATs.
+**This is an active fork of [go-socks5 by armon](https://github.com/armon/go-socks5)**, as the mentioned
+repository does not seem to be updated.
 
-Feature
-=======
+Notable changes:
+- upgrade to Go 1.14 and move to [Go modules](https://blog.golang.org/using-go-modules)
+- merge active pull requests ([#18](https://github.com/armon/go-socks5/pull/18), [#22](https://github.com/armon/go-socks5/pull/22),
+  [#24](https://github.com/armon/go-socks5/pull/24), [#25](https://github.com/armon/go-socks5/pull/25),
+  [#38](https://github.com/armon/go-socks5/pull/38))
+
+
+This module provides a package which implements a [SOCKS4/ SOCKS5 server](http://en.wikipedia.org/wiki/SOCKS).
+SOCKS (Secure Sockets) is used to route traffic between a client and server through an intermediate proxy layer. 
+This can be used to bypass firewalls or NATs.
+
+Features
+========
 
 The package has the following features:
-* "No Auth" mode
-* User/Password authentication
-* Support for the CONNECT command
+
+* SOCKS4 and SOCKS5 support
+* "No Auth" mode *or* User/Password authentication
+* Support for `CONNECT` command
 * Rules to do granular filtering of commands
 * Custom DNS resolution
 * Unit tests
@@ -31,6 +42,10 @@ Example
 Below is a simple example of usage
 
 ```go
+package main
+
+import "github.com/bokysan/go-socks"
+
 // Create a SOCKS5 server
 conf := &socks5.Config{}
 server, err := socks5.New(conf)

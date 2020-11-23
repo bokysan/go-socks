@@ -3,6 +3,7 @@ package socks5
 import (
 	"context"
 	"fmt"
+	"github.com/go-errors/errors"
 	"io"
 	"net"
 	"strconv"
@@ -21,7 +22,7 @@ const (
 
 const (
 	successReply uint8 = iota
-	serverFailure
+	//serverFailure
 	ruleFailure
 	networkUnreachable
 	hostUnreachable
@@ -219,14 +220,15 @@ func (s *Server) handleConnect(ctx context.Context, conn conn, req *Request) err
 		if err := sendReply(conn, resp, nil, req.Version); err != nil {
 			return fmt.Errorf("Failed to send reply: %v", err)
 		}
-		return fmt.Errorf("Connect to %v failed: %v", req.DestAddr, err)
+		return errors.Errorf("connect to %v failed: %v", req.DestAddr, err)
 	}
-	defer target.Close()
+	defer func() {
+		_ = target.Close()
+	}()
 
 	// Send success
-	local := target.LocalAddr().(*net.TCPAddr)
-	bind := AddrSpec{IP: local.IP, Port: local.Port}
-	if err := sendReply(conn, successReply, &bind, req.Version); err != nil {
+	bind := addrSpecFromNetAddr(target.LocalAddr())
+	if err := sendReply(conn, successReply, bind, req.Version); err != nil {
 		return fmt.Errorf("Failed to send reply: %v", err)
 	}
 
@@ -360,6 +362,13 @@ func readAddrSpecv4(r io.Reader) (*AddrSpec, error) {
 	return d, nil
 }
 
+func addrSpecFromNetAddr(addr net.Addr) *AddrSpec {
+	if tcpAddr, ok := addr.(*net.TCPAddr); ok {
+		return &AddrSpec{IP: tcpAddr.IP, Port: tcpAddr.Port}
+	}
+	return nil
+}
+
 // sendReply is used to send a reply message
 func sendReply(w io.Writer, resp uint8, addr *AddrSpec, version byte) error {
 	var msg []byte
@@ -426,7 +435,7 @@ type closeWriter interface {
 func proxy(dst io.Writer, src io.Reader, errCh chan error) {
 	_, err := io.Copy(dst, src)
 	if tcpConn, ok := dst.(closeWriter); ok {
-		tcpConn.CloseWrite()
+		_ = tcpConn.CloseWrite()
 	}
 	errCh <- err
 }
