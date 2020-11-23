@@ -1,4 +1,4 @@
-module github.com/bokysan/go-socks/v2
+module github.com/bokysan/go-socks
 
 go 1.14
 
