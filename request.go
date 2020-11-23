@@ -3,7 +3,7 @@ package socks5
 import (
 	"context"
 	"fmt"
-	"github.com/go-errors/errors"
+	"github.com/pkg/errors"
 	"io"
 	"net"
 	"strconv"
@@ -21,8 +21,8 @@ const (
 )
 
 const (
-	successReply uint8 = iota
-	//serverFailure
+	successReply  uint8 = iota
+	serverFailure       // This needs to stay here because of iota, even if it's not used anywhere in the code
 	ruleFailure
 	networkUnreachable
 	hostUnreachable
@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	unrecognizedAddrType = fmt.Errorf("Unrecognized address type")
+	unrecognizedAddrType = errors.New("unrecognized address type")
 )
 
 // AddressRewriter is used to rewrite a destination transparently
@@ -158,9 +158,9 @@ func (s *Server) handleRequest(req *Request, conn conn) error {
 		nctx, addr, err := s.config.Resolver.Resolve(ctx, dest.FQDN)
 		if err != nil {
 			if err := sendReply(conn, hostUnreachable, nil, req.Version); err != nil {
-				return fmt.Errorf("Failed to send reply: %v", err)
+				return errors.Wrapf(err, "Failed to send reply: %v", err)
 			}
-			return fmt.Errorf("Failed to resolve destination '%v': %v", dest.FQDN, err)
+			return errors.Wrapf(err, "Failed to resolve destination '%v': %v", dest.FQDN, err)
 		}
 		ctx = nctx
 		dest.IP = addr
@@ -182,9 +182,9 @@ func (s *Server) handleRequest(req *Request, conn conn) error {
 		return s.handleAssociate(ctx, conn, req)
 	default:
 		if err := sendReply(conn, commandNotSupported, nil, req.Version); err != nil {
-			return fmt.Errorf("Failed to send reply: %v", err)
+			return errors.Wrapf(err, "Failed to send reply: %v", err)
 		}
-		return fmt.Errorf("Unsupported command: %v", req.Command)
+		return errors.Errorf("Unsupported command: %v", req.Command)
 	}
 }
 
@@ -195,7 +195,7 @@ func (s *Server) handleConnect(ctx context.Context, conn conn, req *Request) err
 		if err := sendReply(conn, ruleFailure, nil, req.Version); err != nil {
 			return fmt.Errorf("Failed to send reply: %v", err)
 		}
-		return fmt.Errorf("Connect to %v blocked by rules", req.DestAddr)
+		return errors.Errorf("Connect to %v blocked by rules", req.DestAddr)
 	} else {
 		ctx = nctx
 	}
@@ -259,14 +259,14 @@ func (s *Server) handleBind(ctx context.Context, conn conn, req *Request) error 
 		if err := sendReply(conn, ruleFailure, nil, req.Version); err != nil {
 			return fmt.Errorf("Failed to send reply: %v", err)
 		}
-		return fmt.Errorf("Bind to %v blocked by rules", req.DestAddr)
+		return errors.Errorf("Bind to %v blocked by rules", req.DestAddr)
 	} else {
 		ctx = nctx
 	}
 
 	// TODO: Support bind
 	if err := sendReply(conn, commandNotSupported, nil, req.Version); err != nil {
-		return fmt.Errorf("Failed to send reply: %v", err)
+		return errors.Wrapf(err, "Failed to send reply: %v", err)
 	}
 	return nil
 }
@@ -278,20 +278,20 @@ func (s *Server) handleAssociate(ctx context.Context, conn conn, req *Request) e
 		if err := sendReply(conn, ruleFailure, nil, req.Version); err != nil {
 			return fmt.Errorf("Failed to send reply: %v", err)
 		}
-		return fmt.Errorf("Associate to %v blocked by rules", req.DestAddr)
+		return errors.Errorf("Associate to %v blocked by rules", req.DestAddr)
 	} else {
 		ctx = nctx
 	}
 
 	// TODO: Support associate
 	if err := sendReply(conn, commandNotSupported, nil, req.Version); err != nil {
-		return fmt.Errorf("Failed to send reply: %v", err)
+		return errors.Wrapf(err, "Failed to send reply: %v", err)
 	}
 	return nil
 }
 
 // readAddrSpec is used to read AddrSpec.
-// Expects an address type byte, follwed by the address and port
+// Expects an address type byte, followed by the address and port
 func readAddrSpec(r io.Reader) (*AddrSpec, error) {
 	d := &AddrSpec{}
 
