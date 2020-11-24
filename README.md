@@ -46,7 +46,7 @@ Below is a simple example of usage
 ```go
 package main
 
-import "github.com/bokysan/go-socks"
+import socks5 "github.com/bokysan/go-socks/v2"
 
 // Create a SOCKS5 server
 conf := &socks5.Config{}
